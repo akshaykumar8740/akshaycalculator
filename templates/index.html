@@ -1,33 +1,153 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>akshay Calculator</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Akshay Calculator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
 </head>
-
 <body>
+    <main class="calculator">
+        <h1>Akshay Calculator</h1>
 
-    <div class="akshay calculator">
-        <h1> __________________________................akshay Calculator................__________________________ </h1>
+        <input id="display" class="display" type="text" value="0"
+               aria-label="Calculator display" readonly>
 
-        <form method="POST">
-            <input type="number" step="any" name="num1" placeholder="First number" required>
+        <div class="buttons">
+            <button class="function" data-action="clear">AC</button>
+            <button class="function" data-action="backspace">⌫</button>
+            <button class="function" data-action="percent">%</button>
+            <button class="operator" data-op="/">÷</button>
 
-            <select name="operator">
-                <option value="+">+</option>
-                <option value="-">−</option>
-                <option value="*">×</option>
-                <option value="/">÷</option>
-            </select>
+            <button data-digit="7">7</button>
+            <button data-digit="8">8</button>
+            <button data-digit="9">9</button>
+            <button class="operator" data-op="*">×</button>
 
-            <input type="number" step="any" name="num2" placeholder="Second number" required>
+            <button data-digit="4">4</button>
+            <button data-digit="5">5</button>
+            <button data-digit="6">6</button>
+            <button class="operator" data-op="-">−</button>
 
-            <button type="submit">Calculate</button>
-        </form>
+            <button data-digit="1">1</button>
+            <button data-digit="2">2</button>
+            <button data-digit="3">3</button>
+            <button class="operator" data-op="+">+</button>
 
-        <h2>Result: {{ result }}</h2>
-    </div>
+            <button class="function" data-action="sign">+/−</button>
+            <button data-digit="0">0</button>
+            <button data-action="decimal">.</button>
+            <button class="equals" data-action="equals">=</button>
+        </div>
+    </main>
 
+    <script>
+        const display = document.getElementById("display");
+        let storedValue = null;
+        let pendingOperator = null;
+        let startNewNumber = true;
+
+        function format(value) {
+            return String(Number(value.toPrecision(12)));
+        }
+
+        function calculate(a, b, operator) {
+            if (operator === "+") return a + b;
+            if (operator === "-") return a - b;
+            if (operator === "*") return a * b;
+            if (operator === "/") return b === 0 ? null : a / b;
+        }
+
+        function enterDigit(digit) {
+            if (startNewNumber || display.value === "Error") {
+                display.value = digit;
+                startNewNumber = false;
+            } else if (display.value.length < 14) {
+                display.value = display.value === "0" ? digit : display.value + digit;
+            }
+        }
+
+        function chooseOperator(operator) {
+            const current = Number(display.value);
+            if (!Number.isFinite(current)) return;
+
+            if (pendingOperator && !startNewNumber) {
+                const result = calculate(storedValue, current, pendingOperator);
+                if (result === null) {
+                    display.value = "Error";
+                    storedValue = null;
+                    pendingOperator = null;
+                    startNewNumber = true;
+                    return;
+                }
+                display.value = format(result);
+            }
+
+            storedValue = Number(display.value);
+            pendingOperator = operator;
+            startNewNumber = true;
+        }
+
+        function doEquals() {
+            if (!pendingOperator || storedValue === null) return;
+
+            const result = calculate(storedValue, Number(display.value), pendingOperator);
+            display.value = result === null ? "Error" : format(result);
+            storedValue = null;
+            pendingOperator = null;
+            startNewNumber = true;
+        }
+
+        document.querySelector(".buttons").addEventListener("click", (event) => {
+            const button = event.target.closest("button");
+            if (!button) return;
+
+            if (button.dataset.digit !== undefined) {
+                enterDigit(button.dataset.digit);
+                return;
+            }
+
+            if (button.dataset.op) {
+                chooseOperator(button.dataset.op);
+                return;
+            }
+
+            switch (button.dataset.action) {
+                case "clear":
+                    display.value = "0";
+                    storedValue = null;
+                    pendingOperator = null;
+                    startNewNumber = true;
+                    break;
+                case "decimal":
+                    if (startNewNumber || display.value === "Error") {
+                        display.value = "0.";
+                        startNewNumber = false;
+                    } else if (!display.value.includes(".")) {
+                        display.value += ".";
+                    }
+                    break;
+                case "backspace":
+                    if (!startNewNumber && display.value !== "Error") {
+                        display.value = display.value.length > 1
+                            ? display.value.slice(0, -1) : "0";
+                    }
+                    break;
+                case "sign":
+                    if (display.value !== "0" && display.value !== "Error") {
+                        display.value = String(Number(display.value) * -1);
+                    }
+                    break;
+                case "percent":
+                    if (display.value !== "Error") {
+                        display.value = format(Number(display.value) / 100);
+                    }
+                    break;
+                case "equals":
+                    doEquals();
+                    break;
+            }
+        });
+    </script>
 </body>
 </html>
